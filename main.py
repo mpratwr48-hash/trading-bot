@@ -1,76 +1,41 @@
-import os
-import time
-import requests
 import pandas as pd
 import pandas_ta as ta
-from datetime import datetime
 
-# --- إعدادات الحساب والبوت ---
-# ضع التوكن والآيدي الخاص بك هنا بين علامات التنصيص
-TELEGRAM_BOT_TOKEN = "ضع_توكن_البوت_هنا"
-TELEGRAM_CHAT_ID = "ضع_ايدي_القناة_او_حسابك_هنا"
 
-# قائمة أزواج OTC المشهورة في Pocket Option
-OTC_PAIRS = [
-    "EURUSD_OTC", "GBPUSD_OTC", "AUDUSD_OTC", "USDCAD_OTC", 
-    "USDCHF_OTC", "EURGBP_OTC", "EURJPY_OTC", "GBPJPY_OTC"
-]
+def main():
+    data = {
+        "Date": [
+            "2026-06-01",
+            "2026-06-02",
+            "2026-06-03",
+            "2026-06-04",
+            "2026-06-05",
+            "2026-06-06",
+            "2026-06-07",
+            "2026-06-08",
+            "2026-06-09",
+            "2026-06-10",
+        ],
+        "Open": [100, 102, 101, 105, 107, 108, 110, 111, 109, 112],
+        "High": [103, 104, 106, 108, 109, 112, 113, 114, 112, 115],
+        "Low": [99, 100, 100, 104, 106, 107, 109, 110, 108, 111],
+        "Close": [102, 101, 105, 107, 108, 111, 112, 113, 110, 114],
+        "Volume": [1200, 1500, 1300, 1600, 1700, 1550, 1800, 1750, 1400, 1900],
+    }
 
-def send_telegram_signal(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
-    try:
-        requests.post(url, json=payload)
-    except Exception as e:
-        print(f"خطأ في إرسال التليجرام: {e}")
+    df = pd.DataFrame(data)
+    df["Date"] = pd.to_datetime(df["Date"])
+    df.set_index("Date", inplace=True)
 
-def get_live_candles(pair):
-    # دالة جلب الأسعار اللحظية (تُغذي ببيانات المنصة لاحقاً)
-    return pd.DataFrame() 
+    # حساب مؤشر ADX
+    df.ta.adx(append=True)
 
-def calculate_indicators(df):
-    # الفلتر الأول: المتوسطات الثقيلة المتوازية
-    df['SMMA_40'] = ta.rma(df['close'], length=40)
-    df['SMMA_50'] = ta.rma(df['close'], length=50)
-    df['SMMA_70'] = ta.rma(df['close'], length=70)
-    df['SMMA_100'] = ta.rma(df['close'], length=100)
-    
-    # الفلتر الثاني والثالث: المتوسطات السريعة والعادية
-    df['SMA_50'] = ta.sma(df['close'], length=50)
-    df['SMA_100'] = ta.sma(df['close'], length=100)
-    df['SMA_10'] = ta.sma(df['close'], length=10)
-    df['WMA_20'] = ta.wma(df['close'], length=20)
-    df['TMA_5'] = ta.sma(ta.sma(df['close'], length=3), length=3)
-    
-    # مؤشرات التأكيد الإضافية (RSI والزخم بإعدادات 45)
-    df['RSI'] = ta.rsi(df['close'], length=14)
-    df['MOM'] = ta.mom(df['close'], length=45)
-    return df
+    # حساب مؤشر الستوكاستك
+    df.ta.stoch(append=True)
 
-def check_trading_strategy(df, pair):
-    if len(df) < 100: return
-    row = df.iloc[-1]
-    prev_row = df.iloc[-2]
+    print("بيانات الأسعار مع ADX والستوكاستك:")
+    print(df[["ADX_14", "DMP_14", "DMN_14", "STOCHk_14_3_3", "STOCHd_14_3_3"]])
 
-    # فحص استقرار الاتجاه وانتظام المتوسطات الثقيلة
-    m_up = (row['SMMA_40'] > row['SMMA_50'] > row['SMMA_70'] > row['SMMA_100'])
-    m_down = (row['SMMA_40'] < row['SMMA_50'] < row['SMMA_70'] < row['SMMA_100'])
-    stable = m_up or m_down
 
-    # شروط تأكيد المؤشرات المساعدة
-    rsi_buy, rsi_sell = row['RSI'] > 50, row['RSI'] < 50
-    mom_buy, mom_sell = row['MOM'] > 0, row['MOM'] < 0
-
-    # [1] استراتيجية نقطة الصفر (انعكاس الشمعة اللحظي)
-    if stable:
-        tma_up = (prev_row['TMA_5'] <= prev_row['SMA_10']) and (row['TMA_5'] > row['SMA_10'])
-        tma_down = (prev_row['TMA_5'] >= prev_row['SMA_10']) and (row['TMA_5'] < row['SMA_10'])
-        
-        if tma_up and rsi_buy and mom_buy:
-            send_signal_message(pair, "🟢 CALL (صعود)", "نقطة الصفر (الانعكاس المفاجئ)")
-            return
-        if tma_down and rsi_sell and mom_sell:
-            send_signal_message(pair, "🔴 PUT (هبوط)", "نقطة الصفر (الانعكاس المفاجئ)")
-            return
-
-    # [2] استراتيجية الاختراق (تقاطع المتوسطات الثلاثية مع 50 و 100 SMA)
+if __name__ == "__main__":
+    main()
