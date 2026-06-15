@@ -27,14 +27,48 @@ def main():
     df["Date"] = pd.to_datetime(df["Date"])
     df.set_index("Date", inplace=True)
 
-    # حساب مؤشر ADX
-    df.ta.adx(append=True)
+    print("=" * 60)
+    print("بيانات الأسعار الأصلية:")
+    print("=" * 60)
+    print(df)
+    print()
 
-    # حساب مؤشر الستوكاستك
-    df.ta.stoch(append=True)
+    # حساب مؤشر ADX باستخدام ta.adx
+    print("=" * 60)
+    print("حساب مؤشر ADX (Average Directional Index):")
+    print("=" * 60)
+    try:
+        adx_result = ta.adx(high=df["High"], low=df["Low"], close=df["Close"], length=14)
+        if adx_result is not None and not adx_result.empty:
+            print("نتائج ADX:")
+            print(adx_result)
+        else:
+            print("⚠️ مؤشر ADX يتطلب بيانات أكثر (حد أدنى 14 شمعة)")
+            print("النتيجة الحالية: فارغة (البيانات المتاحة: 10 شموع فقط)")
+    except Exception as e:
+        print(f"خطأ في حساب ADX: {e}")
+    print()
 
-    print("بيانات الأسعار مع ADX والستوكاستك:")
-    print(df[["ADX_14", "DMP_14", "DMN_14", "STOCHk_14_3_3", "STOCHd_14_3_3"]])
+    # حساب مؤشر الستوكاستك باستخدام ta.stoch
+    print("=" * 60)
+    print("حساب مؤشر الستوكاستك (Stochastic Oscillator):")
+    print("=" * 60)
+    try:
+        stoch_result = ta.stoch(high=df["High"], low=df["Low"], close=df["Close"], k=14, d=3, smooth_k=3)
+        if stoch_result is not None and not stoch_result.empty:
+            print("نتائج الستوكاستك:")
+            print(stoch_result)
+        else:
+            print("⚠️ مؤشر الستوكاستك يتطلب بيانات أكثر (حد أدنى 14 شمعة)")
+            print("النتيجة الحالية: فارغة (البيانات المتاحة: 10 شموع فقط)")
+    except Exception as e:
+        print(f"خطأ في حساب الستوكاستك: {e}")
+    print()
+
+    print("=" * 60)
+    print("ملاحظة: للحصول على نتائج حقيقية للمؤشرات")
+    print("تحتاج البيانات إلى عدد أكبر من الفترات الزمنية")
+    print("=" * 60)
 
 
 if __name__ == "__main__":
